@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>撲克牌 21點遊戲</title>
+  <style>
+    .card {
+      display: inline-block;
+      border: 1px solid black;
+      padding: 10px;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>撲克牌 21點遊戲</h1>
+  <p>籌碼：<span id="chips">300</span></p>
+  <p>下注金額：<input type="number" id="betAmount" min="10" max="200" value="10" required></p>
+  <button onclick="startGame()">開始遊戲</button>
+  <button id="playerHit" onclick="playerHit()" disabled>叫牌</button>
+  <button id="playerStand" onclick="playerStand()" disabled>停牌</button>
+  <h2>玩家手牌</h2>
+  <div id="playerCards"></div>
+  <p>點數：<span id="playerPoints"></span></p>
+  <h2>電腦手牌</h2>
+  <div id="computerCards"></div>
+  <p>點數：<span id="computerPoints"></span></p>
+  <h2>結果</h2>
+  <p id="result"></p>
+
+  <script>
+    var deck = [];
+    var playerCards = [];
+    var computerCards = [];
+    var playerPoints = 0;
+    var computerPoints = 0;
+    var betAmount = 10;
+    var chips = 300;
+
+    function startGame() {
+      // 初始化遊戲狀態
+      deck = createDeck();
+      playerCards = [];
+      computerCards = [];
+      playerPoints = 0;
+      computerPoints = 0;
+      betAmount = parseInt(document.getElementById('betAmount').value);
+      if (betAmount > chips) {
+        alert('下注金額不能超過現有的籌碼數量！');
+        return;
+      }
+      chips -= betAmount;
+
+      // 更新界面
+      document.getElementById('chips').innerText = chips;
+      document.getElementById('betAmount').disabled = true;
+      document.getElementById('playerHit').disabled = false;
+      document.getElementById('playerStand').disabled = false;
+      document.getElementById('result').innerText = '';
+
+      // 隨機抽取兩張牌給玩家和電腦
+      playerCards.push(drawCard(deck));
+      playerCards.push(drawCard(deck));
+      computerCards.push(drawCard(deck));
+      computerCards.push(drawCard(deck));
+
+      // 顯示玩家和電腦的手牌
+      updatePlayerCards();
+      updateComputerCards();
+
+      // 計算點數
+      playerPoints = calculatePoints(playerCards);
+      computerPoints = calculatePoints(computerCards);
+      document.getElementById('playerPoints').innerText = playerPoints;
+      document.getElementById('computerPoints').innerText = '??';
+    }
+
+    function playerHit() {
+      // 抽一張牌
+      playerCards.push(drawCard(deck));
+
+      // 顯示玩家的手牌
+      updatePlayerCards();
+
+      // 計算點數
+      playerPoints = calculatePoints(playerCards);
+      document.getElementById('playerPoints').innerText = playerPoints;
+
+      // 檢查是否爆牌
+      if (playerPoints > 21) {
+        endGame('你輸了！');
+      }
+    }
+
+    function playerStand() {
+      // 電腦進行回合
+      while (computerPoints < 17) {
+        computerCards.push(drawCard(deck));
+        computerPoints = calculatePoints(computerCards);
+        updateComputerCards();
+      }
+
+      // 判斷勝利條件
+      var result;
+      if (computerPoints > 21 || playerPoints > 21) {
+        if (computerPoints > 21 && playerPoints > 21) {
+          result = '平局！';
+          chips += betAmount;
+        } else if (computerPoints > 21) {
+          result = '你贏了！';
+          chips += betAmount * 2;
+        } else {
+          result = '你輸了！';
+        }
+      } else if (playerPoints === computerPoints) {
+        result = '平局！';
+        chips += betAmount;
+      } else if (playerPoints > computerPoints) {
+        result = '你贏了！';
+        chips += betAmount * 2;
+      } else {
+        result = '你輸了！';
+      }
+
+      // 顯示電腦的手牌和點數
+      updateComputerCards();
+      document.getElementById('computerPoints').innerText = computerPoints;
+
+      endGame(result);
+    }
+
+    function endGame(result) {
+      document.getElementById('playerHit').disabled = true;
+      document.getElementById('playerStand').disabled = true;
+      document.getElementById('result').innerText = result;
+      document.getElementById('chips').innerText = chips;
+      document.getElementById('betAmount').disabled = false;
+    }
+
+    function createDeck() {
+      var suits = ['♠', '♥', '♦', '♣'];
+      var values = ['A', '2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K'];
+      var deck = [];
+      for (var suit of suits) {
+        for (var value of values) {
+          deck.push(value + suit);
+        }
+      }
+      return deck;
+    }
+
+    function drawCard(deck) {
+      var randomIndex = Math.floor(Math.random() * deck.length);
+      return deck.splice(randomIndex, 1)[0];
+    }
+
+    function calculatePoints(cards) {
+      var points = 0;
+      var aceCount = 0;
+      for (var card of cards) {
+        var value = card.slice(0, -1);
+        if (value === 'A') {
+          points += 11;
+          aceCount++;
+        } else if (value === 'K' || value === 'Q' || value === 'J') {
+          points += 10;
+        } else {
+          points += parseInt(value);
+        }
+      }
+      while (points > 21 && aceCount > 0) {
+        points -= 10;
+        aceCount--;
+      }
+      return points;
+    }
+
+    function updatePlayerCards() {
+      var playerCardsDiv = document.getElementById('playerCards');
+      playerCardsDiv.innerHTML = '';
+      for (var card of playerCards) {
+        var cardDiv = document.createElement('div');
+        cardDiv.className = 'card';
+        cardDiv.innerText = card;
+        playerCardsDiv.appendChild(cardDiv);
+      }
+    }
+
+    function updateComputerCards() {
+      var computerCardsDiv = document.getElementById('computerCards');
+      computerCardsDiv.innerHTML = '';
+      for (var i = 0; i < computerCards.length; i++) {
+        var cardDiv = document.createElement('div');
+        cardDiv.className = 'card';
+        if (i === 0) {
+          cardDiv.innerText = '??';
+        } else {
+          cardDiv.innerText = computerCards[i];
+        }
+        computerCardsDiv.appendChild(cardDiv);
+      }
+    }
+
+    function updateComputerPoints() {
+      var computerPointsDiv = document.getElementById('computerPoints');
+      if (computerPointsDiv.innerText === '??') {
+        computerPointsDiv.innerText = computerPoints;
+      }
+    }
+  </script>
+</body>
+</html>
